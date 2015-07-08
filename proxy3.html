@@ -1,0 +1,25 @@
+<html>
+<head>
+<title>Proxy3</title>
+<script type="text/javascript">
+function window_onload() {
+	var url = "http://yangpingcd.cloupapp.net/~/";
+	var divText = document.getElementById("divText");
+	divText.innerText = url;
+	
+	var divPlayer = document.getElementById("divPlayer");	
+	divPlayer.innerHTML =
+		"<video width=\"320\" height=\"240\" >" +
+  		"<source src=\"" + url + "\" type=\"video/mp4\">" +
+		"Your browser does not support the video tag." +
+		"</video>";
+}
+</script>
+</head>
+
+<body onload="window_onload()">
+<div id="divText"></div><p></p>
+
+<div id="divPlayer"></div>
+</body>
+</html>

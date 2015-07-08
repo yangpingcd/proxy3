@@ -449,7 +449,7 @@ func handleRequest(req *http.Request, w io.Writer) bool {
 	atomic.AddInt64(&stats.RequestsCount, 1)
 	
 	
-	logMessage("request %s", req.RequestURI)
+	logMessage("request %s from %s", req.RequestURI, req.RemoteAddr)
 	
 	if req.Method != "GET" {
 		w.Write(notAllowedResponseHeader)

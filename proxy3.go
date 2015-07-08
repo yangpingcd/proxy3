@@ -56,7 +56,7 @@ var (
 	internalServerErrorResponseHeader = []byte("HTTP/1.1 500 Internal Server Error\r\nServer: proxy3\r\n\r\n")
 	notAllowedResponseHeader          = []byte("HTTP/1.1 405 Method Not Allowed\r\nServer: proxy3\r\n\r\n")
 	//okResponseHeader                  = []byte("HTTP/1.1 200 OK\r\nServer: proxy2\r\nCache-Control: public, max-age=31536000\r\nETag: W/\"CacheForever\"\r\n")
-	okResponseHeader                  = []byte("HTTP/1.1 200 OK\r\nServer: proxy2\r\nCache-Control: no-cache\r\n")
+	okResponseHeader                  = []byte("HTTP/1.1 200 OK\r\nServer: proxy3\r\nCache-Control: no-cache\r\n")
 	serviceUnavailableResponseHeader  = []byte("HTTP/1.1 503 Service Unavailable\r\nServer: proxy3\r\n\r\n")
 	statsJsonResponseHeader               = []byte("HTTP/1.1 200 OK\r\nServer: proxy3\r\nContent-Type: application/json\r\n\r\n")
 	statsResponseHeader               = []byte("HTTP/1.1 200 OK\r\nServer: proxy3\r\nContent-Type: text/plain\r\n\r\n")
@@ -456,6 +456,11 @@ func handleRequest(req *http.Request, w io.Writer) bool {
 		return false
 	}
 	
+	if req.RequestURI == "/" {
+		w.Write(okResponseHeader)
+		w.Write([]byte("proxy3 server\r\n"))
+		return false
+	}
 	if req.RequestURI == "/favicon.ico" {
 		w.Write(serviceUnavailableResponseHeader)
 		return false

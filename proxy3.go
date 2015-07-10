@@ -25,6 +25,7 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/vharitonsky/iniflags"
+	"github.com/natefinch/lumberjack"
 	"github.com/yangpingcd/mem"
 )
 
@@ -94,8 +95,21 @@ func initUpstreamClients() {
 
 func main() {
 	iniflags.Parse()
+	
+	
+	if Settings.logDir != "" {
+		log.SetOutput(&lumberjack.Logger{
+			//Dir:        "/var/log/myapp/",
+			Dir:        Settings.logDir,
+			//NameFormat: "2006-01-02T15-04-05.000.log",
+			NameFormat: Settings.logNameFormat,
+			MaxSize:    lumberjack.Gigabyte,
+			MaxBackups: 3,
+			MaxAge:     28,
+		})
+	}
+		
 	initUpstreamClients()
-
 	for _, client := range upstreamClients {
 		logMessage("upstreamClient \"%s\": \"%s\"", client.name, client.upstreamHost)
 	}

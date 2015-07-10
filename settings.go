@@ -32,6 +32,9 @@ type AppSettings struct {
 
 	upstreams    Upstreams
 	upstreamFile string
+	
+	logDir string
+	logNameFormat string
 }
 
 var Settings AppSettings = AppSettings{}
@@ -68,4 +71,7 @@ func init() {
 
 	flag.Var(&Settings.upstreams, "upstream", "Path to read upstream clients")
 	flag.StringVar(&Settings.upstreamFile, "upstreamFile", "upstream.ini", "Path to read upstream clients")
+	
+	flag.StringVar(&Settings.logDir, "logDir", "", "Directory to the log files")
+	flag.StringVar(&Settings.logNameFormat, "logNameFormat", "2006-01-02T15-04-05.000.log", "The log file name format")
 }

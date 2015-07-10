@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"flag"
+	"fmt"
 	"os"
 	"runtime"
 )
@@ -12,12 +12,12 @@ const (
 )
 
 type AppSettings struct {
-	chunkCacheSize		 int64 
+	chunkCacheSize       int64
 	manifestCacheSize    int64
 	goMaxProcs           int
 	httpsCertFile        string
 	httpsKeyFile         string
-	httpsListenAddrs     string 
+	httpsListenAddrs     string
 	listenAddrs          string
 	maxConnsPerIp        int
 	maxIdleUpstreamConns int
@@ -27,20 +27,20 @@ type AppSettings struct {
 	statsJsonRequestPath string
 	//upstreamHost         string
 	//upstreamProtocol   string
-	useClientRequestHost bool 
-	writeBufferSize      int 
-	
-	upstreams			Upstreams
-	upstreamFile		string
+	useClientRequestHost bool
+	writeBufferSize      int
+
+	upstreams    Upstreams
+	upstreamFile string
 }
 
 var Settings AppSettings = AppSettings{}
 
 func usage() {
-	fmt.Printf("Proxy3 is a live HLS cache server\n" +			   
-			   "Author: <sliq> ping@sliq.com\n" +
-			   "Current Version: %s\n\n", VERSION)
-			
+	fmt.Printf("Proxy3 is a live HLS cache server\n"+
+		"Author: <sliq> ping@sliq.com\n"+
+		"Current Version: %s\n\n", VERSION)
+
 	flag.PrintDefaults()
 	os.Exit(2)
 }
@@ -65,8 +65,7 @@ func init() {
 	//flag.String(&Settings.upstreamProtocol, "upstreamProtocol", "http", "Use this protocol when talking to the upstream")
 	flag.BoolVar(&Settings.useClientRequestHost, "useClientRequestHost", false, "If set to true, then use 'Host' header from client requests in requests to upstream host. Otherwise use upstreamHost as a 'Host' header in upstream requests")
 	flag.IntVar(&Settings.writeBufferSize, "writeBufferSize", 4096, "The size of write buffer for incoming connections")
-	
+
 	flag.Var(&Settings.upstreams, "upstream", "Path to read upstream clients")
 	flag.StringVar(&Settings.upstreamFile, "upstreamFile", "upstream.ini", "Path to read upstream clients")
 }
-

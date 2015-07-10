@@ -6,13 +6,11 @@ import (
 	"strings"
 )
 
-
 type Upstreams []Upstream
 type Upstream struct {
-	name		 string
+	name         string
 	upstreamHost string
 }
-
 
 func (u *Upstreams) String() string {
 	return fmt.Sprint(*u)

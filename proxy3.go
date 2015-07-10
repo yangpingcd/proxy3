@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
-	"github.com/vharitonsky/iniflags"
 	"io"
 	//"io/ioutil"
 	"log"
@@ -22,34 +21,13 @@ import (
 	"encoding/json"	
 
 	"os"
-	"os/signal"
-	"github.com/yangpingcd/mem"
+	//"os/signal"	
 	_ "net/http/pprof"
+	
+	"github.com/vharitonsky/iniflags"
+	"github.com/yangpingcd/mem"
 )
 
-/*var (
-	//cacheSize            = flag.Int("cacheSize", 100, "The total cache size in Mbytes")
-	chunkCacheSize		 = flag.Int64("chunkCacheSize", 100, "The total chunk cache size in Mbytes")
-	manifestCacheSize    = flag.Int64("manifestCacheSize", 10, "The total manifest cache size in Mbytes")
-	goMaxProcs           = flag.Int("goMaxProcs", runtime.NumCPU(), "Maximum number of simultaneous Go threads")
-	httpsCertFile        = flag.String("httpsCertFile", "/etc/ssl/certs/ssl-cert-snakeoil.pem", "Path to HTTPS server certificate. Used only if listenHttpsAddr is set")
-	httpsKeyFile         = flag.String("httpsKeyFile", "/etc/ssl/private/ssl-cert-snakeoil.key", "Path to HTTPS server key. Used only if listenHttpsAddr is set")
-	httpsListenAddrs     = flag.String("httpsListenAddrs", "", "A list of TCP addresses to listen to HTTPS requests. Leave empty if you don't need https")
-	listenAddrs          = flag.String("listenAddrs", ":8098", "A list of TCP addresses to listen to HTTP requests. Leave empty if you don't need http")
-	maxConnsPerIp        = flag.Int("maxConnsPerIp", 32, "The maximum number of concurrent connections from a single ip")
-	maxIdleUpstreamConns = flag.Int("maxIdleUpstreamConns", 50, "The maximum idle connections to upstream host")
-	maxItemsCount        = flag.Int("maxItemsCount", 100*1000, "The maximum number of items in the cache")
-	readBufferSize       = flag.Int("readBufferSize", 1024, "The size of read buffer for incoming connections")
-	statsRequestPath     = flag.String("statsRequestPath", "/static_proxy_stats", "Path to page with statistics")
-	statsJsonRequestPath = flag.String("statsJsonRequestPath", "/static_proxy_statsjson", "Path to page with statistics")
-	//upstreamHost         = flag.String("upstreamHost", "www.google.com", "Upstream host to proxy data from. May include port in the form 'host:port'")
-	upstreamHost         = flag.String("upstreamHost", "t-wowza:1935", "Upstream host to proxy data from. May include port in the form 'host:port'")
-	//upstreamProtocol     = flag.String("upstreamProtocol", "http", "Use this protocol when talking to the upstream")
-	useClientRequestHost = flag.Bool("useClientRequestHost", false, "If set to true, then use 'Host' header from client requests in requests to upstream host. Otherwise use upstreamHost as a 'Host' header in upstream requests")
-	writeBufferSize      = flag.Int("writeBufferSize", 4096, "The size of write buffer for incoming connections")
-	
-	upstreamFile		 = flag.String("upstreamFile", "upstream.ini", "Path to read upstream clients")
-)*/
 
 var (
 	ifNoneMatchResponseHeader         = []byte("HTTP/1.1 304 Not Modified\r\nServer: proxy3\r\nEtag: W/\"CacheForever\"\r\n\r\n")
@@ -62,11 +40,7 @@ var (
 	statsResponseHeader               = []byte("HTTP/1.1 200 OK\r\nServer: proxy3\r\nContent-Type: text/plain\r\n\r\n")
 )
 
-var (
-	//playlistCache		CacheManager
-	//chunkCache         	CacheManager
-	//manifestCache		CacheManager
-	
+var (	
 	perIpConnTracker = createPerIpConnTracker()
 	stats            Stats
 	upstreamClient   http.Client
@@ -92,7 +66,7 @@ func initUpstreamClients() {
 	
 	f,err := os.Open(Settings.upstreamFile)
 	if err != nil {
-		fmt.Printf("Failed to open the upstreamFile \"%s\"\n", Settings.upstreamFile)
+		logMessage("Failed to open the upstreamFile \"%s\"", Settings.upstreamFile)
 		//os.Exit(-1)
 		return
 	}
@@ -125,53 +99,20 @@ func main() {
 	initUpstreamClients()
 	
 	for _, client := range upstreamClients {
-		fmt.Printf("upstreamClient \"%s\": \"%s\"\n", client.name, client.upstreamHost)
+		logMessage("upstreamClient \"%s\": \"%s\"", client.name, client.upstreamHost)
 	}
 
 	runtime.GOMAXPROCS(Settings.goMaxProcs)
 	
+	//c := make(chan os.Signal, 1)
+	//signal.Notify(c, os.Interrupt)
+	//<-c
+	//logMessage("ctrl-c is captured")
 	
-	/*var err error
-	cacheSize := int64(10)
-	if cacheSize <= 0 {
-		// todo, auto
-		cacheSize = 10
-	}
-	playlistCache, err = CreateCacheManager(cacheSize, 3*60) // 3 minutes
-	if err != nil {
-		logFatal("Failed to create the playlist cache")
-	}
-	defer playlistCache.Close()
-	
-	cacheSize = *chunkCacheSize
-	if cacheSize <= 0 {
-		// todo, auto
-		cacheSize = 100	
-	}
-	chunkCache, err = CreateCacheManager(cacheSize, 30) // 30 seconds
-	if err != nil {
-		logFatal("Failed to create the chunk cache")
-	}
-	defer chunkCache.Close()
-	
-	cacheSize = *manifestCacheSize
-	if cacheSize <= 0 {
-		// todo, auto
-		cacheSize = 10
-	}
-	manifestCache, err = CreateCacheManager(cacheSize, 2) // 2 seconds
-	if err != nil {
-		logFatal("Failed to create the manifest cache")
-	}
-	defer manifestCache.Close()
-	
+	Start(nil)
+}
 
-	upstreamClient = http.Client {
-		Transport: &http.Transport{
-			MaxIdleConnsPerHost: *maxIdleUpstreamConns,
-		},
-	}*/
-
+func Start(stop chan int) {
 	var addr string
 	for _, addr = range strings.Split(Settings.httpsListenAddrs, ",") {
 		go serveHttps(addr)
@@ -183,21 +124,21 @@ func main() {
 	go manageCache()
 	
 	// performance
-	go func() {
+	/*go func() {
 		//http.Server.ListenAndServe()
 		http.ListenAndServe("localhost:9000", nil)
-	}()
+	}()*/
 
 
-
-	//waitForeverCh := make(chan int)
-	//<-waitForeverCh
-	
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	<-c
-	logMessage("ctrl-c is captured")
+	for {
+		select {
+		case <-stop:
+			return
+		case <-time.After(1 * time.Second):
+		}
+	}
 }
+
 
 func getAvailableMemoryPercent() float64 {
 	var avail = mem.GetAvailable()

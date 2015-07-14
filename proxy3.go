@@ -17,7 +17,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	//"regexp"
 	"encoding/json"
 
 	"os"
@@ -29,6 +28,8 @@ import (
 	"github.com/kardianos/service"
 	"github.com/yangpingcd/mem"
 )
+
+
 
 var (
 	ifNoneMatchResponseHeader         = []byte("HTTP/1.1 304 Not Modified\r\nServer: proxy3\r\nEtag: W/\"CacheForever\"\r\n\r\n")
@@ -96,17 +97,23 @@ func initUpstreamClients() {
 
 
 
-func main() {
-	iniflags.Parse()
+var svcFlag = flag.String("service", "", "Control the system service.")
 
-	if false {
-		svcConfig := &service.Config{
-			Name:        "GoServiceExampleSimple",
-			DisplayName: "Go Service Example",
-			Description: "This is an example Go service.",
-		}
-		fmt.Println(svcConfig)
+func main() {
+	
+	//flag.Parse()
+	
+	svcConfig := &service.Config {
+		Name:        "SliqProxy3Service",
+		DisplayName: "Sliq Proxy3 Service",
+		Description: "Proxy cache server for Live HLS streams",
 	}
+	//fmt.Println(svcConfig)
+		
+	
+	iniflags.Parse()
+	
+	
 	
 	if Settings.logDir != "" {
 		log.SetOutput(&lumberjack.Logger{
@@ -129,11 +136,53 @@ func main() {
 	//signal.Notify(c, os.Interrupt)
 	//<-c
 	//logMessage("ctrl-c is captured")
+	
+	prg := &program{}
+	s, err := service.New(prg, svcConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+	errs := make(chan error, 5)
+	logger, err = s.Logger(errs)
+	if err != nil {
+		log.Fatal(err)
+	}
+	
+	if len(*svcFlag) != 0 {
+		err := service.Control(s, *svcFlag)
+		if err != nil {
+			log.Printf("Valid actions: %q\n", service.ControlAction)
+			log.Fatal(err)
+		}
+		return
+	}
+	
+	go func() {
+		for {
+			err := <-errs
+			if err != nil {
+				log.Print(err)
+			}
+		}
+	}()
 
-	Start(nil)
+	
+	if len(*svcFlag) != 0 {
+		err := service.Control(s, *svcFlag)
+		if err != nil {
+			log.Printf("Valid actions: %q\n", service.ControlAction)
+			log.Fatal(err)
+		}
+		return
+	}
+	err = s.Run()
+	if err != nil {
+		logger.Error(err)
+	}
+	//Start(nil)
 }
 
-func Start(stop chan int) {
+func Start(stop chan struct{}) error {
 	var addr string
 	for _, addr = range strings.Split(Settings.httpsListenAddrs, ",") {
 		go serveHttps(addr)
@@ -153,7 +202,7 @@ func Start(stop chan int) {
 	for {
 		select {
 		case <-stop:
-			return
+			return nil
 		case <-time.After(1 * time.Second):
 		}
 	}
@@ -535,121 +584,7 @@ func handleRequest(req *http.Request, w io.Writer) bool {
 	return true*/
 }
 
-/*func fetchIt(req *http.Request, cache *Cache, key KeyType) *CacheItem {
-	cache.LockKey(key)
-	defer cache.UnlockKey(key)
 
-	item, err := cache.GetDeItem(key, time.Second)
-
-	if err != nil {
-		//if err != ybc.ErrCacheMiss {
-		if err != ErrCacheMiss {
-			logFatal("Unexpected error when obtaining cache value by key=[%v]: [%s]", key, err)
-		}
-
-		if key == KeyZero {
-			atomic.AddInt64(&stats.UncacheableCount, 1)
-		}else {
-			atomic.AddInt64(&stats.CacheMissesCount, 1)
-		}
-		item = fetchFromUpstream(req, key)
-
-		if item == nil {
-			// we make an empty item to indicate there is an error
-			item = &CacheItem{}
-		}
-
-		if item != nil {
-			item.requestHost = getRequestHost(req)
-			item.requestUrl = req.RequestURI
-			item.cacheTime = time.Now()
-
-			if key != KeyZero {
-				// add it to cache
-				cache.AddItem(key, item)
-
-				logMessage("add item to cache for %s", req.RequestURI)
-			}
-		}
-
-	} else {
-		atomic.AddInt64(&stats.CacheHitsCount, 1)
-	}
-	//defer item.Close()
-
-	// todo: handle the same key
-	return item
-}*/
-
-//func fetchFromUpstream(req *http.Request, key []byte) *ybc.Item {
-/*func fetchFromUpstream(req *http.Request, key KeyType) *CacheItem {
-	//atomic.AddInt64(&stats.BytesReadFromUpstream, int64(bodyLen))
-	logMessage("fetchFromUpstream: %s://%s%s", *upstreamProtocol, *upstreamHost, req.RequestURI)
-
-	upstreamUrl := fmt.Sprintf("%s://%s%s", *upstreamProtocol, *upstreamHost, req.RequestURI)
-	upstreamReq, err := http.NewRequest("GET", upstreamUrl, nil)
-	if err != nil {
-		logRequestError(req, "Cannot create request structure for [%v]: [%s]", key, err)
-		return nil
-	}
-	upstreamReq.Host = getRequestHost(req)
-
-	upstreamClient := http.Client {
-		Transport: &http.Transport{
-			MaxIdleConnsPerHost: *maxIdleUpstreamConns,
-		},
-	}
-	resp, err := upstreamClient.Do(upstreamReq)
-	if err != nil {
-		logRequestError(req, "Cannot make request for [%v]: [%s]", key, err)
-		return nil
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		logRequestError(req, "Cannot read response for [%v]: [%s]", key, err)
-		return nil
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		logRequestError(req, "Unexpected status code=%d for the response [%v]", resp.StatusCode, key)
-		return nil
-	}
-
-	contentType := resp.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
-
-	//item := Item {contentType, body, MaxTtl}
-	item := CacheItem {contentType: contentType, contentBody: body, ttl: MaxTtl}
-	bodyLen := len(body)
-
-
-	atomic.AddInt64(&stats.BytesReadFromUpstream, int64(bodyLen))
-	return &item
-}*/
-
-//func loadContentType(req *http.Request, r io.Reader) (contentType string, err error) {
-func loadContentType(req *http.Request, item *CacheItem) (contentType string, err error) {
-	/*var sizeBuf [1]byte
-	if _, err = r.Read(sizeBuf[:]); err != nil {
-		logRequestError(req, "Cannot read content-type length from cache: [%s]", err)
-		return
-	}
-	strSize := int(sizeBuf[0])
-	strBuf := make([]byte, strSize)
-	if _, err = r.Read(strBuf); err != nil {
-		logRequestError(req, "Cannot read content-type string with length=%d from cache: [%s]", strSize, err)
-		return
-	}
-	contentType = string(strBuf)
-	return*/
-
-	contentType = item.contentType
-	return
-}
 
 func getRequestHost(req *http.Request, upstreamHost string) string {
 	if Settings.useClientRequestHost {

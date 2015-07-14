@@ -33,8 +33,11 @@ type AppSettings struct {
 	upstreams    Upstreams
 	upstreamFile string
 	
-	logDir string
-	logNameFormat string
+	logDir 			string	// "/var/log/myapp/"
+	logNameFormat 	string	// "2006-01-02T15-04-05.000.log"
+	logMaxSize 		int     // in Megabyte
+	logMaxBackups 	int
+	logMaxAge 		int
 }
 
 var Settings AppSettings = AppSettings{}
@@ -74,4 +77,7 @@ func init() {
 	
 	flag.StringVar(&Settings.logDir, "logDir", "", "Directory to the log files")
 	flag.StringVar(&Settings.logNameFormat, "logNameFormat", "2006-01-02T15-04-05.000.log", "The log file name format")
+	flag.IntVar(&Settings.logMaxSize, "logMaxSize", 5, "The maximum size(Megabyte) of log files before rolling")
+	flag.IntVar(&Settings.logMaxBackups, "logMaxBackups", 1000, "The maximum number of old log files to retain")
+	flag.IntVar(&Settings.logMaxAge, "logMaxAge", 30, "the maximum number of days to retain old log files")	
 }

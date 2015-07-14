@@ -26,6 +26,7 @@ import (
 
 	"github.com/vharitonsky/iniflags"
 	"github.com/natefinch/lumberjack"
+	"github.com/kardianos/service"
 	"github.com/yangpingcd/mem"
 )
 
@@ -93,19 +94,27 @@ func initUpstreamClients() {
 	}
 }
 
+
+
 func main() {
 	iniflags.Parse()
-	
+
+	if false {
+		svcConfig := &service.Config{
+			Name:        "GoServiceExampleSimple",
+			DisplayName: "Go Service Example",
+			Description: "This is an example Go service.",
+		}
+		fmt.Println(svcConfig)
+	}
 	
 	if Settings.logDir != "" {
 		log.SetOutput(&lumberjack.Logger{
-			//Dir:        "/var/log/myapp/",
 			Dir:        Settings.logDir,
-			//NameFormat: "2006-01-02T15-04-05.000.log",
 			NameFormat: Settings.logNameFormat,
-			MaxSize:    lumberjack.Gigabyte,
-			MaxBackups: 3,
-			MaxAge:     28,
+			MaxSize:    int64(Settings.logMaxSize) * lumberjack.Megabyte,
+			MaxBackups: Settings.logMaxBackups,
+			MaxAge:     Settings.logMaxAge,
 		})
 	}
 		

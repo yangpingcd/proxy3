@@ -100,19 +100,25 @@ func initUpstreamClients() {
 var svcFlag = flag.String("service", "", "Control the system service.")
 
 func main() {
-	
 	//flag.Parse()
-	
-	svcConfig := &service.Config {
-	Name:        "SliqProxy3",
-		DisplayName: "Sliq Proxy3 Service",
-		Description: "Proxy cache server for Live HLS streams",
-	}
-	//fmt.Println(svcConfig)
-		
-	
 	iniflags.Parse()
 	
+	
+	
+	
+	svcConfig := &service.Config {
+		Name:        "SliqProxy3",
+		DisplayName: "Sliq Proxy3 Service",
+		Description: "Proxy cache server for Live HLS streams",
+		Arguments:   []string {},
+	}
+	for _, arg := range os.Args[1:] {
+		if !strings.HasPrefix(arg, "-service=") {
+			svcConfig.Arguments = append(svcConfig.Arguments, arg)
+		}
+	}
+	/*fmt.Println(svcConfig.Arguments)
+	return*/
 	
 	
 	if Settings.logDir != "" {

@@ -25,12 +25,12 @@ type LogItem struct {
 	cs_uri_stem string
 	cs_uri_query string
 	s_port		int
-	//cs-username
+	cs_username	string
 	c_ip		string
-	//cs(User-Agent)
-	//cs(Referer)
-	sc_status int
-	sc_substatus int
+	cs_User_Agent	string
+	cs_Referer		string
+	sc_status 		int
+	sc_substatus 	int
 	//sc-win32-status int
 	time_taken int
 }
@@ -84,9 +84,35 @@ func writeAccessLogHeader(aLog *AccessLog) {
 	// write header	
 	aLog.log.Printf("#Software: Proxy3\n")
 	aLog.log.Printf("#Version: 1.0\n")
-	aLog.log.Printf("#Date: %s\n", time.Now().Format("2006-01-02 03:04:05"))
-	//"date time s-ip cs-method cs-uri-stem cs-uri-query s-port cs-username c-ip cs(User-Agent) cs(Referer) sc-status sc-substatus sc-win32-status time-taken"
-	aLog.log.Printf("#Fields: date time s-ip cs-method cs-uri-query s-port c-ip sc-status time-taken\n")
+	aLog.log.Printf("#Start-Date: %s\n", time.Now().Format("2006-01-02 15:04:05"))
+	aLog.log.Printf("#Date: %s\n", time.Now().Format("2006-01-02"))
+	//aLog.log.Printf("#Date: %s\n", time.Now().Format("2006-01-02 15:04:05"))
+	fields := []string {
+		"date",
+		"time",
+		"s-ip",
+		"cs-method",
+		"cs-uri-stem",
+		"cs-uri-query",
+		"s-port",
+		"cs-username",
+		"c-ip",
+		"cs(User-Agent)",
+		"cs(Referer)",
+		"sc-status",
+		"sc-substatus",
+		//"sc-win32-status ",
+		"time-taken",
+	}
+	
+	aLog.log.Printf("#Fields: " + strings.Join(fields, "\t"))	
+}
+
+func logString(s string) string {
+	if s == "" {
+		return "-"
+	}
+	return s
 }
 
 func (aLog *AccessLog) StartAccessLog(quit chan struct{}) {
@@ -108,22 +134,29 @@ out:
 		aLog.logItems = make([]LogItem, 0)
 		aLog.logItemsMutex.Unlock()
 		
+		
+		
 		for _, item := range(items) {
+			s_ip := item.s_ip
+			if s_ip == "" { s_ip = "-"}
+			c_ip := item.c_ip
+			if c_ip == "" { c_ip = "-"}
+		
 			ss := []string {
 				item.date.Format("2006-01-02"),
 				item.date.Format("03:04:05"),
-				item.s_ip,
-				item.cs_method,
-				item.cs_uri_stem,
-				item.cs_uri_query,
+				logString(item.s_ip),
+				logString(item.cs_method),
+				logString(item.cs_uri_stem),
+				logString(item.cs_uri_query),
 				strconv.Itoa(item.s_port),
-				//cs-username
-				item.c_ip,
-				//cs(User-Agent)
-				//cs(Referer)
+				logString(item.cs_username),
+				logString(item.c_ip),
+				logString(item.cs_User_Agent),
+				logString(item.cs_Referer),
 				strconv.Itoa(item.sc_status),
 				strconv.Itoa(item.sc_substatus),
-				//sc-win32-status int
+				//strconv.Itoa(sc-win32-status),
 				strconv.Itoa(item.time_taken),
 			}
 			

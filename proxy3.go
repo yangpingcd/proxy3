@@ -14,6 +14,7 @@ import (
 	"runtime/debug"
 	"sort"
 	"strings"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -458,8 +459,8 @@ func handleConnection(conn net.Conn) {
 //var chunkRegExp, _ = regexp.Compile(`(media_).*_(\d*)(\.ts)`)
 
 func handleRequest(req *http.Request, w io.Writer) bool {
-	/*timeStartRequest := time.Now()
-	defer func() {
+	timeStartHandle := time.Now()
+	/*defer func() {
 		timeEndRequest := time.Now()
 		elapse := timeEndRequest.Sub(timeStartRequest)
 		logMessage(fmt.Sprintf("spent %v to handleRequest %v", elapse, req.RequestURI))
@@ -467,9 +468,37 @@ func handleRequest(req *http.Request, w io.Writer) bool {
 	
 	var logItem LogItem = LogItem{}
 	logItem.date = time.Now()
-	logItem.cs_uri_query = req.RequestURI
+	//logItem.cs_uri_stem = req.req.RequestURI
+	logItem.cs_uri_stem = req.URL.Path
+	logItem.cs_uri_query = req.URL.RawQuery
 	logItem.cs_method = req.Method
-	defer accessLog.AddItem(logItem)
+	if pos := strings.Index(req.RemoteAddr, ":"); pos>=0 {
+		logItem.s_ip = req.RemoteAddr[:pos]
+		port, err := strconv.Atoi(req.RemoteAddr[pos+1:])
+		if err == nil {
+			logItem.s_port = port
+		}
+	} else {
+		logItem.s_ip = req.RemoteAddr
+		//logItem.s_port = 80
+		/*if pos := strings.Index(req.URL.Host, ":"); pos >=0 {
+			port, err := strconv.Atoi(req.URL.Host[pos+1:])
+			if err == nil {
+				logItem.s_port = port
+			}
+		}*/
+	}
+	
+	
+	logItem.cs_User_Agent = req.UserAgent()
+	logItem.cs_Referer = req.Referer()
+	logItem.sc_status = 200
+	logItem.sc_substatus = 0
+	
+	defer func(startTime time.Time, logItem *LogItem) {
+		logItem.time_taken = int(time.Now().Sub(startTime).Nanoseconds() / 1000000)		
+		accessLog.AddItem(*logItem)
+	}(timeStartHandle, &logItem)
 	
 
 	atomic.AddInt64(&stats.RequestsCount, 1)
@@ -478,28 +507,33 @@ func handleRequest(req *http.Request, w io.Writer) bool {
 
 	if req.Method != "GET" {
 		w.Write(notAllowedResponseHeader)
+		logItem.sc_status = 200
 		return false
 	}
 
 	if req.RequestURI == "/" {
 		w.Write(okResponseHeader)
 		w.Write([]byte("proxy3 server\r\n"))
+		logItem.sc_status = 200
 		return false
 	}
 	if req.RequestURI == "/favicon.ico" {
 		w.Write(serviceUnavailableResponseHeader)
+		logItem.sc_status = 200
 		return false
 	}
 
 	if req.RequestURI == Settings.statsRequestPath {
 		w.Write(statsResponseHeader)
 		stats.WriteToStream(w)
+		logItem.sc_status = 200
 		return false
 	}
 
 	if req.RequestURI == Settings.statsJsonRequestPath {
 		w.Write(statsJsonResponseHeader)
 		stats.WriteJsonToStream(w)
+		logItem.sc_status = 200
 		return false
 	}
 
@@ -526,6 +560,7 @@ func handleRequest(req *http.Request, w io.Writer) bool {
 	// no clients to handle this
 	//if true {
 	w.Write(serviceUnavailableResponseHeader)
+	logItem.sc_status = 200
 	return false
 	//}
 

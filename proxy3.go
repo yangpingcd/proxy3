@@ -107,7 +107,7 @@ func main() {
 	
 	
 	svcConfig := &service.Config {
-		Name:        "Proxy3",
+		Name:        "proxy3",
 		DisplayName: "Sliq Proxy3 Service",
 		Description: "Proxy cache server for Live HLS streams",
 		Arguments:   []string {},

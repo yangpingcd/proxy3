@@ -1,20 +1,20 @@
 package main
 
 import (
-	"flag"
+	//"flag"
 	"fmt"
 	"testing"
 )
 
 var (
-	clients UpstreamParamSlice
+	upstreams    Upstreams
 )
 
 func init() {
-	flag.Var(&clients, "client", "client")
+	//flag.Var(&clients, "client", "client")
 }
 
-func TestUpstreamParamSlice(*testing.T) {
+func TestUpstreams(*testing.T) {
 	//flag.Parse()
 
 	/*clients := UpstreamParamSlice {
@@ -22,5 +22,5 @@ func TestUpstreamParamSlice(*testing.T) {
 		{"server2", ":1991"},
 	}*/
 
-	fmt.Println(clients)
+	fmt.Println("upstreams=", upstreams)
 }

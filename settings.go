@@ -11,6 +11,14 @@ const (
 	VERSION = "0.1.0"
 )
 
+type LogSetting struct {
+	Filename 	string
+	MaxSize 	int
+	MaxBackups 	int
+	MaxAge 		int
+	LocalTime	bool
+}
+
 type AppSettings struct {
 	chunkCacheSize       int64
 	manifestCacheSize    int64
@@ -33,11 +41,19 @@ type AppSettings struct {
 	upstreams    Upstreams
 	upstreamFile string
 	
-	logDir 			string	// "/var/log/myapp/"
+	logSetting		LogSetting
+	/*logDir 			string	// "/var/log/myapp/"
 	logNameFormat 	string	// "2006-01-02T15-04-05.000.log"
 	logMaxSize 		int     // in Megabyte
 	logMaxBackups 	int
-	logMaxAge 		int
+	logMaxAge 		int*/
+	
+	accessLogSetting	LogSetting
+	/*accessLogDir	string	// "/var/log/proxy3/access"	
+	accessLogNameFormat 	string	// "2006-01-02T15-04-05.000.log"
+	accessLogMaxSize 		int     // in Megabyte
+	accessLogMaxBackups 	int
+	accessLogMaxAge 		int*/
 }
 
 var Settings AppSettings = AppSettings{}
@@ -54,7 +70,7 @@ func usage() {
 func init() {
 	flag.Usage = usage
 
-	flag.Int64Var(&Settings.chunkCacheSize, "chunkCacheSize", 100, "The total chunk cache size in Mbytes")
+	flag.Int64Var(&Settings.chunkCacheSize, "chunkCacheSize", 1000, "The total chunk cache size in Mbytes")
 	flag.Int64Var(&Settings.manifestCacheSize, "manifestCacheSize", 10, "The total manifest cache size in Mbytes")
 	flag.IntVar(&Settings.goMaxProcs, "goMaxProcs", runtime.NumCPU(), "Maximum number of simultaneous Go threads")
 	flag.StringVar(&Settings.httpsCertFile, "httpsCertFile", "/etc/ssl/certs/ssl-cert-snakeoil.pem", "Path to HTTPS server certificate. Used only if listenHttpsAddr is set")
@@ -75,9 +91,17 @@ func init() {
 	flag.Var(&Settings.upstreams, "upstream", "Path to read upstream clients")
 	flag.StringVar(&Settings.upstreamFile, "upstreamFile", "upstream.ini", "Path to read upstream clients")
 	
-	flag.StringVar(&Settings.logDir, "logDir", "", "Directory to the log files")
-	flag.StringVar(&Settings.logNameFormat, "logNameFormat", "2006-01-02T15-04-05.000.log", "The log file name format")
-	flag.IntVar(&Settings.logMaxSize, "logMaxSize", 5, "The maximum size(Megabyte) of log files before rolling")
-	flag.IntVar(&Settings.logMaxBackups, "logMaxBackups", 1000, "The maximum number of old log files to retain")
-	flag.IntVar(&Settings.logMaxAge, "logMaxAge", 30, "the maximum number of days to retain old log files")	
+	//flag.StringVar(&Settings.logSetting.Dir, "logDir", "", "Directory to the log files")
+	flag.StringVar(&Settings.logSetting.Filename, "logFilename", "", "The log file name format")
+	flag.IntVar(&Settings.logSetting.MaxSize, "logMaxSize", 5, "The maximum size in megabyte of log files before rolling")
+	flag.IntVar(&Settings.logSetting.MaxBackups, "logMaxBackups", 1000, "The maximum number of old log files to retain")
+	flag.IntVar(&Settings.logSetting.MaxAge, "logMaxAge", 30, "the maximum number of days to retain old log files")
+	flag.BoolVar(&Settings.logSetting.LocalTime, "logLocalTime", false, "use localtime for the log backup filename")
+	
+	//flag.StringVar(&Settings.accessLogSetting.Dir, "accessLogDir", "", "Directory to the access log files")
+	flag.StringVar(&Settings.accessLogSetting.Filename, "accessLogFilename", "", "The log file name format")
+	flag.IntVar(&Settings.accessLogSetting.MaxSize, "accessLogMaxSize", 5, "The maximum size in megabyte of log files before rolling")
+	flag.IntVar(&Settings.accessLogSetting.MaxBackups, "accessLogMaxBackups", 1000, "The maximum number of old log files to retain")
+	flag.IntVar(&Settings.accessLogSetting.MaxAge, "accessLogMaxAge", 30, "the maximum number of days to retain old log files")	
+	flag.BoolVar(&Settings.accessLogSetting.LocalTime, "accessLogLocalTime", false, "use localtime for the log backup filename")
 }

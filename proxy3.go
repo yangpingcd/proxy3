@@ -24,7 +24,8 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/vharitonsky/iniflags"
-	"github.com/natefinch/lumberjack"
+	//"github.com/natefinch/lumberjack"
+	"gopkg.in/natefinch/lumberjack.v2"
 	"github.com/kardianos/service"
 	"github.com/yangpingcd/mem"
 )
@@ -98,16 +99,15 @@ func initUpstreamClients() {
 
 
 var svcFlag = flag.String("service", "", "Control the system service.")
+var accessLog AccessLog
 
 func main() {
 	//flag.Parse()
-	iniflags.Parse()
-	
-	
+	iniflags.Parse()	
 	
 	
 	svcConfig := &service.Config {
-		Name:        "SliqProxy3",
+		Name:        "Proxy3",
 		DisplayName: "Sliq Proxy3 Service",
 		Description: "Proxy cache server for Live HLS streams",
 		Arguments:   []string {},
@@ -120,15 +120,20 @@ func main() {
 	/*fmt.Println(svcConfig.Arguments)
 	return*/
 	
-	
-	if Settings.logDir != "" {
+	// intiailze the generic log file
+	if Settings.logSetting.Filename != "" {
 		log.SetOutput(&lumberjack.Logger{
-			Dir:        Settings.logDir,
-			NameFormat: Settings.logNameFormat,
-			MaxSize:    int64(Settings.logMaxSize) * lumberjack.Megabyte,
-			MaxBackups: Settings.logMaxBackups,
-			MaxAge:     Settings.logMaxAge,
+			Filename: 	Settings.logSetting.Filename,
+			MaxSize:    Settings.logSetting.MaxSize,
+			MaxBackups: Settings.logSetting.MaxBackups,
+			MaxAge:     Settings.logSetting.MaxAge,
+			LocalTime:  Settings.logSetting.LocalTime,
 		})
+	}
+	
+	// initialize the access log file
+	if true {
+		accessLog = NewAccessLog(Settings.accessLogSetting)	
 	}
 		
 	initUpstreamClients()
@@ -189,6 +194,10 @@ func main() {
 }
 
 func Start(stop chan struct{}) error {
+	quitAccessLog := make(chan struct{})
+	go accessLog.StartAccessLog(quitAccessLog)
+	
+	
 	var addr string
 	for _, addr = range strings.Split(Settings.httpsListenAddrs, ",") {
 		go serveHttps(addr)
@@ -455,6 +464,13 @@ func handleRequest(req *http.Request, w io.Writer) bool {
 		elapse := timeEndRequest.Sub(timeStartRequest)
 		logMessage(fmt.Sprintf("spent %v to handleRequest %v", elapse, req.RequestURI))
 	}()*/
+	
+	var logItem LogItem = LogItem{}
+	logItem.date = time.Now()
+	logItem.cs_uri_query = req.RequestURI
+	logItem.cs_method = req.Method
+	defer accessLog.AddItem(logItem)
+	
 
 	atomic.AddInt64(&stats.RequestsCount, 1)
 

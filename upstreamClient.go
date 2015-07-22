@@ -114,7 +114,7 @@ func (client *UpstreamClient) Handle(req *http.Request, w io.Writer) bool {
 	}*/
 	// it is in the cache, but error
 	if item.contentBody == nil {
-		w.Write(serviceUnavailableResponseHeader)
+		w.Write(serviceUnavailableResponseHeader.header)
 		return false
 	}
 
@@ -123,7 +123,7 @@ func (client *UpstreamClient) Handle(req *http.Request, w io.Writer) bool {
 		return false
 	}*/
 
-	if _, err = w.Write(okResponseHeader); err != nil {
+	if _, err = w.Write(okResponseHeader.header); err != nil {
 		return false
 	}
 	//if _, err = fmt.Fprintf(w, "Content-Type: %s\nContent-Length: %d\n\n", contentType, item.Available()); err != nil {

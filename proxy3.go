@@ -33,15 +33,20 @@ import (
 
 
 
+type CodeHeader struct {
+	code 	int
+	header	[]byte
+}
+
 var (
-	ifNoneMatchResponseHeader         = []byte("HTTP/1.1 304 Not Modified\r\nServer: proxy3\r\nEtag: W/\"CacheForever\"\r\n\r\n")
-	internalServerErrorResponseHeader = []byte("HTTP/1.1 500 Internal Server Error\r\nServer: proxy3\r\n\r\n")
-	notAllowedResponseHeader          = []byte("HTTP/1.1 405 Method Not Allowed\r\nServer: proxy3\r\n\r\n")
+	ifNoneMatchResponseHeader         = CodeHeader{304, []byte("HTTP/1.1 304 Not Modified\r\nServer: proxy3\r\nEtag: W/\"CacheForever\"\r\n\r\n")}
+	internalServerErrorResponseHeader = CodeHeader{500, []byte("HTTP/1.1 500 Internal Server Error\r\nServer: proxy3\r\n\r\n")}
+	notAllowedResponseHeader          = CodeHeader{405, []byte("HTTP/1.1 405 Method Not Allowed\r\nServer: proxy3\r\n\r\n")}
 	//okResponseHeader                  = []byte("HTTP/1.1 200 OK\r\nServer: proxy2\r\nCache-Control: public, max-age=31536000\r\nETag: W/\"CacheForever\"\r\n")
-	okResponseHeader                 = []byte("HTTP/1.1 200 OK\r\nServer: proxy3\r\nCache-Control: no-cache\r\n")
-	serviceUnavailableResponseHeader = []byte("HTTP/1.1 503 Service Unavailable\r\nServer: proxy3\r\n\r\n")
-	statsJsonResponseHeader          = []byte("HTTP/1.1 200 OK\r\nServer: proxy3\r\nContent-Type: application/json\r\n\r\n")
-	statsResponseHeader              = []byte("HTTP/1.1 200 OK\r\nServer: proxy3\r\nContent-Type: text/plain\r\n\r\n")
+	okResponseHeader                 = CodeHeader{200, []byte("HTTP/1.1 200 OK\r\nServer: proxy3\r\nCache-Control: no-cache\r\n")}
+	serviceUnavailableResponseHeader = CodeHeader{503, []byte("HTTP/1.1 503 Service Unavailable\r\nServer: proxy3\r\n\r\n")}
+	statsJsonResponseHeader          = CodeHeader{200, []byte("HTTP/1.1 200 OK\r\nServer: proxy3\r\nContent-Type: application/json\r\n\r\n")}
+	statsResponseHeader              = CodeHeader{200, []byte("HTTP/1.1 200 OK\r\nServer: proxy3\r\nContent-Type: text/plain\r\n\r\n")}
 )
 
 var (
@@ -64,7 +69,7 @@ func initUpstreamClients() {
 		upstreamClients = append(upstreamClients, client)
 	}
 
-	if Settings.upstreamFile == "" {
+	/*if Settings.upstreamFile == "" {
 		return
 	}
 
@@ -94,7 +99,7 @@ func initUpstreamClients() {
 			client := NewUpstreamClient(serviceName, upstreamHost)
 			upstreamClients = append(upstreamClients, client)
 		}
-	}
+	}*/
 }
 
 
@@ -461,8 +466,8 @@ func handleConnection(conn net.Conn) {
 func handleRequest(req *http.Request, w io.Writer) bool {
 	timeStartHandle := time.Now()
 	/*defer func() {
-		timeEndRequest := time.Now()
-		elapse := timeEndRequest.Sub(timeStartRequest)
+		timeEndHandle := time.Now()
+		elapse := timeEndRequest.Sub(timeStartHandle)
 		logMessage(fmt.Sprintf("spent %v to handleRequest %v", elapse, req.RequestURI))
 	}()*/
 	
@@ -489,6 +494,8 @@ func handleRequest(req *http.Request, w io.Writer) bool {
 		}*/
 	}
 	
+	//req.Header.
+	
 	
 	logItem.cs_User_Agent = req.UserAgent()
 	logItem.cs_Referer = req.Referer()
@@ -496,7 +503,8 @@ func handleRequest(req *http.Request, w io.Writer) bool {
 	logItem.sc_substatus = 0
 	
 	defer func(startTime time.Time, logItem *LogItem) {
-		logItem.time_taken = int(time.Now().Sub(startTime).Nanoseconds() / 1000000)		
+		elapse := time.Now().Sub(startTime)		
+		logItem.time_taken = int(elapse.Nanoseconds() / 1000000)
 		accessLog.AddItem(*logItem)
 	}(timeStartHandle, &logItem)
 	
@@ -506,40 +514,41 @@ func handleRequest(req *http.Request, w io.Writer) bool {
 	logMessage("request %s from %s", req.RequestURI, req.RemoteAddr)
 
 	if req.Method != "GET" {
-		w.Write(notAllowedResponseHeader)
-		logItem.sc_status = 200
+		w.Write(notAllowedResponseHeader.header)
+		logItem.sc_status = notAllowedResponseHeader.code
 		return false
 	}
 
 	if req.RequestURI == "/" {
-		w.Write(okResponseHeader)
+		w.Write(okResponseHeader.header)
 		w.Write([]byte("proxy3 server\r\n"))
-		logItem.sc_status = 200
+		logItem.sc_status = okResponseHeader.code
 		return false
 	}
 	if req.RequestURI == "/favicon.ico" {
-		w.Write(serviceUnavailableResponseHeader)
-		logItem.sc_status = 200
+		w.Write(serviceUnavailableResponseHeader.header)
+		logItem.sc_status = serviceUnavailableResponseHeader.code
 		return false
 	}
 
 	if req.RequestURI == Settings.statsRequestPath {
-		w.Write(statsResponseHeader)
+		w.Write(statsResponseHeader.header)
 		stats.WriteToStream(w)
-		logItem.sc_status = 200
+		logItem.sc_status = statsResponseHeader.code
 		return false
 	}
 
 	if req.RequestURI == Settings.statsJsonRequestPath {
-		w.Write(statsJsonResponseHeader)
+		w.Write(statsJsonResponseHeader.header)
 		stats.WriteJsonToStream(w)
-		logItem.sc_status = 200
+		logItem.sc_status = statsJsonResponseHeader.code
 		return false
 	}
 
 	if req.Header.Get("If-None-Match") != "" {
-		_, err := w.Write(ifNoneMatchResponseHeader)
+		_, err := w.Write(ifNoneMatchResponseHeader.header)
 		atomic.AddInt64(&stats.IfNoneMatchHitsCount, 1)
+		logItem.sc_status = ifNoneMatchResponseHeader.code
 		return err == nil
 	}
 
@@ -559,8 +568,8 @@ func handleRequest(req *http.Request, w io.Writer) bool {
 
 	// no clients to handle this
 	//if true {
-	w.Write(serviceUnavailableResponseHeader)
-	logItem.sc_status = 200
+	w.Write(serviceUnavailableResponseHeader.header)
+	logItem.sc_status = serviceUnavailableResponseHeader.code
 	return false
 	//}
 

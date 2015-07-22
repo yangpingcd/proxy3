@@ -12,8 +12,8 @@ const (
 )
 
 type LogSetting struct {
-	Filename 	string
-	MaxSize 	int
+	Filename 	string		// "/var/log/proxy3/access/proxy3-access.log"
+	MaxSize 	int			// in Megabyte
 	MaxBackups 	int
 	MaxAge 		int
 	LocalTime	bool
@@ -37,23 +37,12 @@ type AppSettings struct {
 	//upstreamProtocol   string
 	useClientRequestHost bool
 	writeBufferSize      int
-
-	upstreams    Upstreams
-	upstreamFile string
 	
 	logSetting		LogSetting
-	/*logDir 			string	// "/var/log/myapp/"
-	logNameFormat 	string	// "2006-01-02T15-04-05.000.log"
-	logMaxSize 		int     // in Megabyte
-	logMaxBackups 	int
-	logMaxAge 		int*/
-	
 	accessLogSetting	LogSetting
-	/*accessLogDir	string	// "/var/log/proxy3/access"	
-	accessLogNameFormat 	string	// "2006-01-02T15-04-05.000.log"
-	accessLogMaxSize 		int     // in Megabyte
-	accessLogMaxBackups 	int
-	accessLogMaxAge 		int*/
+	
+	upstreams    Upstreams
+	//upstreamFile string	
 }
 
 var Settings AppSettings = AppSettings{}
@@ -87,21 +76,19 @@ func init() {
 	//flag.String(&Settings.upstreamProtocol, "upstreamProtocol", "http", "Use this protocol when talking to the upstream")
 	flag.BoolVar(&Settings.useClientRequestHost, "useClientRequestHost", false, "If set to true, then use 'Host' header from client requests in requests to upstream host. Otherwise use upstreamHost as a 'Host' header in upstream requests")
 	flag.IntVar(&Settings.writeBufferSize, "writeBufferSize", 4096, "The size of write buffer for incoming connections")
-
-	flag.Var(&Settings.upstreams, "upstream", "Path to read upstream clients")
-	flag.StringVar(&Settings.upstreamFile, "upstreamFile", "upstream.ini", "Path to read upstream clients")
 	
-	//flag.StringVar(&Settings.logSetting.Dir, "logDir", "", "Directory to the log files")
 	flag.StringVar(&Settings.logSetting.Filename, "logFilename", "", "The log file name format")
 	flag.IntVar(&Settings.logSetting.MaxSize, "logMaxSize", 5, "The maximum size in megabyte of log files before rolling")
 	flag.IntVar(&Settings.logSetting.MaxBackups, "logMaxBackups", 1000, "The maximum number of old log files to retain")
 	flag.IntVar(&Settings.logSetting.MaxAge, "logMaxAge", 30, "the maximum number of days to retain old log files")
 	flag.BoolVar(&Settings.logSetting.LocalTime, "logLocalTime", false, "use localtime for the log backup filename")
 	
-	//flag.StringVar(&Settings.accessLogSetting.Dir, "accessLogDir", "", "Directory to the access log files")
-	flag.StringVar(&Settings.accessLogSetting.Filename, "accessLogFilename", "", "The log file name format")
+	flag.StringVar(&Settings.accessLogSetting.Filename, "accessLogFilename", "", "The access log file name")
 	flag.IntVar(&Settings.accessLogSetting.MaxSize, "accessLogMaxSize", 5, "The maximum size in megabyte of log files before rolling")
 	flag.IntVar(&Settings.accessLogSetting.MaxBackups, "accessLogMaxBackups", 1000, "The maximum number of old log files to retain")
 	flag.IntVar(&Settings.accessLogSetting.MaxAge, "accessLogMaxAge", 30, "the maximum number of days to retain old log files")	
 	flag.BoolVar(&Settings.accessLogSetting.LocalTime, "accessLogLocalTime", false, "use localtime for the log backup filename")
+	
+	flag.Var(&Settings.upstreams, "upstream", "Path to read upstream clients")
+	//flag.StringVar(&Settings.upstreamFile, "upstreamFile", "upstream.ini", "Path to read upstream clients")	
 }

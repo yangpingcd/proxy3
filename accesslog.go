@@ -12,7 +12,8 @@ import (
 	"sync"
 	
 	//"github.com/natefinch/lumberjack"
-	"gopkg.in/natefinch/lumberjack.v2"
+	//"gopkg.in/natefinch/lumberjack.v2"
+	"github.com/yangpingcd/lumberjack"
 )
 
 

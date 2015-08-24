@@ -1,7 +1,7 @@
 package main
 
 import (
-	//"fmt"
+	"fmt"
 	"strings"
 	"strconv"
 	"log"
@@ -16,23 +16,27 @@ import (
 )
 
 
+type mylogger struct {
+	*lumberjack.Logger
+}
+
 
 type LogItem struct {
-	date		time.Time
+	date				time.Time
 	//time
-	s_ip		string
-	cs_method	string
-	cs_uri_stem string
-	cs_uri_query string
-	s_port		int
-	cs_username	string
-	c_ip		string
-	cs_User_Agent	string
-	cs_Referer		string
-	sc_status 		int
-	sc_substatus 	int
-	//sc-win32-status int
-	time_taken int
+	s_ip				string
+	cs_method			string
+	cs_uri_stem 		string
+	cs_uri_query 		string
+	s_port				int
+	cs_username			string
+	c_ip				string
+	cs_User_Agent		string
+	cs_Referer			string
+	sc_status 			int
+	sc_substatus 		int
+	//sc-win32-status 	int
+	time_taken 			int
 }
 
 type AccessLog struct {
@@ -43,6 +47,11 @@ type AccessLog struct {
 	logWriter io.Writer
 	//accessLogWriter bufio.Writer
 	log *log.Logger
+}
+
+func logcallback(bool) []byte {
+	data := accessLogHeader()
+	return []byte(data)
 }
 
 func NewAccessLog(setting LogSetting) AccessLog {
@@ -61,13 +70,23 @@ func NewAccessLog(setting LogSetting) AccessLog {
 		aLog.log = log.New(aLog.logWriter, "", 0)
 	
 	} else {
-		aLog.log = log.New(&lumberjack.Logger{
+		/*aLog.log = log.New(&lumberjack.Logger {
 			Filename:	setting.Filename,
 			MaxSize:    setting.MaxSize,
 			MaxBackups: setting.MaxBackups,
 			MaxAge:     setting.MaxAge,
 			LocalTime:  setting.LocalTime,
-		}, "", 0)
+		}, "", 0)*/
+		
+		aLog.log = log.New(&mylogger { &lumberjack.Logger {
+			Filename:	setting.Filename,
+			MaxSize:    setting.MaxSize,
+			MaxBackups: setting.MaxBackups,
+			MaxAge:     setting.MaxAge,
+			LocalTime:  setting.LocalTime,
+			
+			Callback:   logcallback,
+		}}, "", 0)
 	}
 		
 	return aLog
@@ -80,13 +99,17 @@ func (aLog *AccessLog) AddItem(item LogItem) {
 	aLog.logItems = append(aLog.logItems, item)
 }
 
-func writeAccessLogHeader(aLog *AccessLog) {
-	// write header	
-	aLog.log.Printf("#Software: Proxy3\n")
-	aLog.log.Printf("#Version: 1.0\n")
-	aLog.log.Printf("#Start-Date: %s\n", time.Now().Format("2006-01-02 15:04:05"))
-	aLog.log.Printf("#Date: %s\n", time.Now().Format("2006-01-02"))
+var access_start_date = time.Now()
+func accessLogHeader() string {
+	header := ""
+	
+	header += fmt.Sprintf("#Software: Proxy3\n")
+	header += fmt.Sprintf("#Version: 1.0\n")
+	//header += fmt.Sprintf("#Start-Date: %s\n", time.Now().Format("2006-01-02 15:04:05"))
+	header += fmt.Sprintf("#Start-Date: %s\n", access_start_date.Format("2006-01-02 15:04:05"))	
+	header += fmt.Sprintf("#Date: %s\n", time.Now().Format("2006-01-02"))
 	//aLog.log.Printf("#Date: %s\n", time.Now().Format("2006-01-02 15:04:05"))
+	
 	fields := []string {
 		"date",
 		"time",
@@ -105,8 +128,11 @@ func writeAccessLogHeader(aLog *AccessLog) {
 		"time-taken",
 	}
 	
-	aLog.log.Printf("#Fields: " + strings.Join(fields, "\t"))	
+	header += fmt.Sprintf("#Fields: %s\n", strings.Join(fields, "\t"))	
+	
+	return header
 }
+
 
 func logString(s string) string {
 	if s == "" {
@@ -116,7 +142,6 @@ func logString(s string) string {
 }
 
 func (aLog *AccessLog) StartAccessLog(quit chan struct{}) {
-	writeAccessLogHeader(aLog)
 	
 out:
 	for {
@@ -126,7 +151,7 @@ out:
 				
 			case <-time.After(200*time.Millisecond):
 				break
-		}				
+		}
 		
 		// copy the logs 
 		aLog.logItemsMutex.Lock()

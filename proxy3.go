@@ -26,9 +26,10 @@ import (
 
 	"github.com/vharitonsky/iniflags"
 	//"github.com/natefinch/lumberjack"
-	"gopkg.in/natefinch/lumberjack.v2"
+	//"gopkg.in/natefinch/lumberjack.v2"	
 	"github.com/kardianos/service"
 	"github.com/yangpingcd/mem"
+	"github.com/yangpingcd/lumberjack"
 )
 
 

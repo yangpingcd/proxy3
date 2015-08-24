@@ -15,14 +15,17 @@ func init() {
 }
 
 func TestAccessLog(*testing.T) {
-	
-	aLog := NewAccessLog()
+	setting := LogSetting {
+		Filename: "c:\\programData\\Sliq\\Test\\testlog.log",
+		MaxSize:  1,
+	}
+	aLog := NewAccessLog(setting)
 	
 	quit := make(chan struct{})
 	go aLog.StartAccessLog(quit)
 	
 	
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 10000; i++ {
 		aLog.AddItem(LogItem{
 			date: time.Now(), 
 			s_ip: "192.168.0.31",

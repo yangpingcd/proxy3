@@ -1,0 +1,67 @@
+upstart is used by Ubuntu 14.04 LTS 
+systemd is used by Ubuntu 15.04 and CentOS 7.1
+
+
+install proxy3 in linux
+
+1. install golang
+	#sudo apt-get install golang
+	#sudo yum install golang
+	
+	wget https://storage.googleapis.com/golang/go1.5.linux-amd64.tar.gz
+	tar -xzf go1.5.linux-amd64.tar.gz
+	sudo mv go /usr/local/go
+	
+
+2. install gcc, git, dos2unix
+	sudo apt-get install gcc git dos2unix
+	sudo yum install gcc git dos2unix
+		
+	
+		
+4. build proxy3
+	export GOROOT=/usr/local/go
+	export PATH=$PATH:$GOROOT/bin
+	export GOPATH=~/gocode
+	go get github.com/yangpingcd/proxy3
+	
+5. install proxy3 as service
+	cd $GOPATH/bin
+	cp $GOPATH/src/github.com/yangpingcd/proxy3/proxy3.ini .
+	dos2unix proxy3.ini
+	vi proxy3.ini
+	sudo ./proxy3 -service=install -config=$GOPATH/bin/proxy3.ini
+	vi /etc/init/proxy3.conf
+	
+6. run proxy3 service
+	[upstart]
+		sudo start proxy3
+	[systemd]
+		sudo systemctl start proxy3
+	
+	
+7. stop proxy3 service
+	[upstart]
+		sudo stop proxy3
+	[systemd]
+		sudo systemctl stop proxy3
+	
+
+
+
+
+install proxy3 in docker (CoreOS)
+
+
+
+install proxy3 in windows
+1. get proxy3.exe, proxy3.ini from Sliq
+
+2. install proxy3 service
+	run command line as Administrator
+	proxy3 -service=install -config=c:\sliq\proxy3.ini
+	
+3. uninstall proxy3 service
+	run command line as Administrator
+	proxy3 -service=uninstall
+	

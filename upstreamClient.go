@@ -39,7 +39,7 @@ func NewUpstreamClient(name string, upstreamHost string) UpstreamClient {
 	}
 	//defer playlistCache.Close()
 
-	cacheSize = Settings.chunkCacheSize
+	cacheSize = Settings.ChunkCacheSize
 	if cacheSize <= 0 {
 		// todo, auto
 		cacheSize = 100
@@ -50,7 +50,7 @@ func NewUpstreamClient(name string, upstreamHost string) UpstreamClient {
 	}
 	//defer chunkCache.Close()
 
-	cacheSize = Settings.manifestCacheSize
+	cacheSize = Settings.ManifestCacheSize
 	if cacheSize <= 0 {
 		// todo, auto
 		cacheSize = 10

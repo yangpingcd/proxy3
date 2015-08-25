@@ -65,8 +65,8 @@ func initUpstreamClients() {
 		upstreamClients = append(upstreamClients, client)
 	}()*/
 
-	for _, upstream := range Settings.upstreams {
-		client := NewUpstreamClient(upstream.name, upstream.upstreamHost)
+	for _, upstream := range Settings.Upstreams {
+		client := NewUpstreamClient(upstream.Name, upstream.UpstreamHost)
 		upstreamClients = append(upstreamClients, client)
 	}
 
@@ -110,7 +110,7 @@ var accessLog AccessLog
 
 func main() {
 	//flag.Parse()
-	iniflags.Parse()	
+	iniflags.Parse()
 	
 	
 	svcConfig := &service.Config {
@@ -128,19 +128,19 @@ func main() {
 	return*/
 	
 	// intiailze the generic log file
-	if Settings.logSetting.Filename != "" {
+	if Settings.LogSetting.Filename != "" {
 		log.SetOutput(&lumberjack.Logger{
-			Filename: 	Settings.logSetting.Filename,
-			MaxSize:    Settings.logSetting.MaxSize,
-			MaxBackups: Settings.logSetting.MaxBackups,
-			MaxAge:     Settings.logSetting.MaxAge,
-			LocalTime:  Settings.logSetting.LocalTime,
+			Filename: 	Settings.LogSetting.Filename,
+			MaxSize:    Settings.LogSetting.MaxSize,
+			MaxBackups: Settings.LogSetting.MaxBackups,
+			MaxAge:     Settings.LogSetting.MaxAge,
+			LocalTime:  Settings.LogSetting.LocalTime,
 		})
 	}
 	
 	// initialize the access log file
 	if true {
-		accessLog = NewAccessLog(Settings.accessLogSetting)	
+		accessLog = NewAccessLog(Settings.AccessLogSetting)	
 	}
 		
 	initUpstreamClients()
@@ -148,7 +148,7 @@ func main() {
 		logMessage("upstreamClient \"%s\": \"%s\"", client.name, client.upstreamHost)
 	}
 
-	runtime.GOMAXPROCS(Settings.goMaxProcs)
+	runtime.GOMAXPROCS(Settings.GoMaxProcs)
 
 	//c := make(chan os.Signal, 1)
 	//signal.Notify(c, os.Interrupt)
@@ -725,29 +725,6 @@ func UsageToString(size int64) string {
 	}
 }
 
-func cacheStatsToStream(cache CacheManager, w io.Writer) {
-
-	cacheCap := atomic.LoadInt64(&cache.cacheCap)
-	duration := atomic.LoadInt64(&cache.cacheDuration)
-
-	cache.tasksMutex.Lock()
-	cacheObjects := len(cache.tasks)
-	cache.tasksMutex.Unlock()
-
-	cacheUsed := atomic.LoadInt64(&cache.stat.cacheUsed)
-	cacheMisses := atomic.LoadInt64(&cache.stat.cacheMisses)
-	cacheHits := atomic.LoadInt64(&cache.stat.cacheHits)
-
-	fmt.Fprintf(w, "  capacity: %d MB\n", cacheCap)
-	fmt.Fprintf(w, "  duration: %d seconds\n", duration)
-
-	fmt.Fprintf(w, "  objects: %d\n", cacheObjects)
-
-	fmt.Fprintf(w, "  used: %s\n", UsageToString(cacheUsed))
-	fmt.Fprintf(w, "  misses: %d\n", cacheMisses)
-	fmt.Fprintf(w, "  hits: %d\n", cacheHits)
-}
-
 func (s *Stats) WriteToStream(w io.Writer) {
 	fmt.Fprintf(w, "Command-line flags\n")
 	flag.VisitAll(func(f *flag.Flag) {
@@ -781,23 +758,12 @@ func (s *Stats) WriteToStream(w io.Writer) {
 	items := GetStats()
 	for _, item := range items {
 		fmt.Fprintf(w, "%s PlaylistCache stats (playlist.m3u8)\n", item.Name)
-		cacheStatsJsonToStream(item.PlaylistStat, w)
+		item.PlaylistStats.WriteToStream(w)
 		fmt.Fprintf(w, "%s ManifestCache stats (chunklist*.m3u8)\n", item.Name)
-		cacheStatsJsonToStream(item.ManifestStat, w)
+		item.ManifestStats.WriteToStream(w)
 		fmt.Fprintf(w, "%s ChunkCache stats (*.ts)\n", item.Name)
-		cacheStatsJsonToStream(item.ChunkStat, w)
-	}
-	
-
-	/*for _, client := range upstreamClients {
-
-		fmt.Fprintf(w, "%s PlaylistCache stats (playlist.m3u8)\n", client.name)
-		cacheStatsToStream(client.playlistCache, w)
-		fmt.Fprintf(w, "%s ManifestCache stats (chunklist*.m3u8)\n", client.name)
-		cacheStatsToStream(client.manifestCache, w)
-		fmt.Fprintf(w, "%s ChunkCache stats (*.ts)\n", client.name)
-		cacheStatsToStream(client.chunkCache, w)
-	}*/
+		item.ChunkStats.WriteToStream(w)
+	}	
 }
 
 type CacheStatsJson struct {
@@ -811,7 +777,7 @@ type CacheStatsJson struct {
 	CacheHits int64
 }
 
-func cacheStatsJsonToStream(stats CacheStatsJson, w io.Writer) {
+func (stats CacheStatsJson) WriteToStream(w io.Writer) {
 	fmt.Fprintf(w, "  Capacity: %d MB\n", stats.CacheCap)
 	fmt.Fprintf(w, "  Duration: %d seconds\n", stats.Duration)
 
@@ -836,37 +802,29 @@ func cacheStatsToJson(cache CacheManager, json *CacheStatsJson) {
 	json.CacheHits = atomic.LoadInt64(&cache.stat.cacheHits)
 }
 
-type ClientStatJson struct {
+type ClientStatsJson struct {
 	Name string
 		
-	PlaylistStat 	CacheStatsJson
-	ManifestStat	CacheStatsJson
-	ChunkStat		CacheStatsJson	
+	PlaylistStats 	CacheStatsJson
+	ManifestStats	CacheStatsJson
+	ChunkStats		CacheStatsJson	
 }
 
-func GetStats() []ClientStatJson {
-	items := make([]ClientStatJson, 0)
+func GetStats() []ClientStatsJson {
+	items := make([]ClientStatsJson, 0)
 	
 	for _, client := range upstreamClients {
-		item := ClientStatJson {
+		item := ClientStatsJson {
 			Name: client.name,
 			
-			PlaylistStat: CacheStatsJson{},
-			ManifestStat: CacheStatsJson{},
-			ChunkStat: CacheStatsJson{},
+			PlaylistStats: CacheStatsJson{},
+			ManifestStats: CacheStatsJson{},
+			ChunkStats: CacheStatsJson{},
 		}
 		
-		cacheStatsToJson(client.playlistCache, &item.PlaylistStat)
-		cacheStatsToJson(client.manifestCache, &item.ManifestStat)
-		cacheStatsToJson(client.chunkCache, &item.ChunkStat)
-		
-		
-		/*fmt.Fprintf(w, "%s PlaylistCache stats (playlist.m3u8)\n", client.name)
-		cacheStatsToStream(client.playlistCache, w)
-		fmt.Fprintf(w, "%s ManifestCache stats (chunklist*.m3u8)\n", client.name)
-		cacheStatsToStream(client.manifestCache, w)
-		fmt.Fprintf(w, "%s ChunkCache stats (*.ts)\n", client.name)
-		cacheStatsToStream(client.chunkCache, w)*/
+		cacheStatsToJson(client.playlistCache, &item.PlaylistStats)
+		cacheStatsToJson(client.manifestCache, &item.ManifestStats)
+		cacheStatsToJson(client.chunkCache, &item.ChunkStats)
 		
 		items = append(items, item)
 	}
@@ -874,12 +832,20 @@ func GetStats() []ClientStatJson {
 	return items
 }
 
-
 func (s *Stats) WriteJsonToStream(w io.Writer) {	
-	//buf, _ := json.Marshal(stats)
 	
-	items := GetStats()
-	buf, _ := json.Marshal(items)
+	stats := struct {
+		Settings		AppSettings
+		Stats			Stats
+		ClientStats		[]ClientStatsJson
+	} {
+		Settings: 		Settings,
+		Stats:			*s,
+		ClientStats:	GetStats(),
+	} 
+		
+	//buf, _ := json.Marshal(stats)
+	buf, _ := json.MarshalIndent(stats, "", "    ")
 	
 	w.Write(buf)
 }

@@ -8,8 +8,8 @@ import (
 
 type Upstreams []Upstream
 type Upstream struct {
-	name         string
-	upstreamHost string
+	Name         string
+	UpstreamHost string
 }
 
 func (u *Upstreams) String() string {

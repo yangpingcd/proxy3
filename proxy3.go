@@ -777,8 +777,19 @@ func (s *Stats) WriteToStream(w io.Writer) {
 
 	//
 	fmt.Fprintf(w, "\n")
+	
+	items := GetStats()
+	for _, item := range items {
+		fmt.Fprintf(w, "%s PlaylistCache stats (playlist.m3u8)\n", item.Name)
+		cacheStatsJsonToStream(item.PlaylistStat, w)
+		fmt.Fprintf(w, "%s ManifestCache stats (chunklist*.m3u8)\n", item.Name)
+		cacheStatsJsonToStream(item.ManifestStat, w)
+		fmt.Fprintf(w, "%s ChunkCache stats (*.ts)\n", item.Name)
+		cacheStatsJsonToStream(item.ChunkStat, w)
+	}
+	
 
-	for _, client := range upstreamClients {
+	/*for _, client := range upstreamClients {
 
 		fmt.Fprintf(w, "%s PlaylistCache stats (playlist.m3u8)\n", client.name)
 		cacheStatsToStream(client.playlistCache, w)
@@ -786,13 +797,89 @@ func (s *Stats) WriteToStream(w io.Writer) {
 		cacheStatsToStream(client.manifestCache, w)
 		fmt.Fprintf(w, "%s ChunkCache stats (*.ts)\n", client.name)
 		cacheStatsToStream(client.chunkCache, w)
-	}
+	}*/
 }
 
-func (s *Stats) WriteJsonToStream(w io.Writer) {
-	/*s := struct {
+type CacheStatsJson struct {
+	
+	CacheCap int64
+	Duration int64
+	CacheObjects int
+	
+	CacheUsed int64
+	CacheMisses int64
+	CacheHits int64
+}
 
-			}*/
-	buf, _ := json.Marshal(stats)
+func cacheStatsJsonToStream(stats CacheStatsJson, w io.Writer) {
+	fmt.Fprintf(w, "  Capacity: %d MB\n", stats.CacheCap)
+	fmt.Fprintf(w, "  Duration: %d seconds\n", stats.Duration)
+
+	fmt.Fprintf(w, "  Objects: %d\n", stats.CacheObjects)
+
+	fmt.Fprintf(w, "  Used: %s\n", UsageToString(stats.CacheUsed))
+	fmt.Fprintf(w, "  Misses: %d\n", stats.CacheMisses)
+	fmt.Fprintf(w, "  Hits: %d\n", stats.CacheHits)
+}
+
+func cacheStatsToJson(cache CacheManager, json *CacheStatsJson) {
+
+	json.CacheCap = atomic.LoadInt64(&cache.cacheCap)
+	json.Duration = atomic.LoadInt64(&cache.cacheDuration)
+
+	cache.tasksMutex.Lock()
+	json.CacheObjects = len(cache.tasks)
+	cache.tasksMutex.Unlock()
+
+	json.CacheUsed = atomic.LoadInt64(&cache.stat.cacheUsed)
+	json.CacheMisses = atomic.LoadInt64(&cache.stat.cacheMisses)
+	json.CacheHits = atomic.LoadInt64(&cache.stat.cacheHits)
+}
+
+type ClientStatJson struct {
+	Name string
+		
+	PlaylistStat 	CacheStatsJson
+	ManifestStat	CacheStatsJson
+	ChunkStat		CacheStatsJson	
+}
+
+func GetStats() []ClientStatJson {
+	items := make([]ClientStatJson, 0)
+	
+	for _, client := range upstreamClients {
+		item := ClientStatJson {
+			Name: client.name,
+			
+			PlaylistStat: CacheStatsJson{},
+			ManifestStat: CacheStatsJson{},
+			ChunkStat: CacheStatsJson{},
+		}
+		
+		cacheStatsToJson(client.playlistCache, &item.PlaylistStat)
+		cacheStatsToJson(client.manifestCache, &item.ManifestStat)
+		cacheStatsToJson(client.chunkCache, &item.ChunkStat)
+		
+		
+		/*fmt.Fprintf(w, "%s PlaylistCache stats (playlist.m3u8)\n", client.name)
+		cacheStatsToStream(client.playlistCache, w)
+		fmt.Fprintf(w, "%s ManifestCache stats (chunklist*.m3u8)\n", client.name)
+		cacheStatsToStream(client.manifestCache, w)
+		fmt.Fprintf(w, "%s ChunkCache stats (*.ts)\n", client.name)
+		cacheStatsToStream(client.chunkCache, w)*/
+		
+		items = append(items, item)
+	}
+	
+	return items
+}
+
+
+func (s *Stats) WriteJsonToStream(w io.Writer) {	
+	//buf, _ := json.Marshal(stats)
+	
+	items := GetStats()
+	buf, _ := json.Marshal(items)
+	
 	w.Write(buf)
 }

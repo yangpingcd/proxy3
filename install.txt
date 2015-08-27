@@ -27,11 +27,14 @@ install proxy3 in linux
 	
 5. install proxy3 as service
 	cd $GOPATH/bin
-	cp $GOPATH/src/github.com/yangpingcd/proxy3/proxy3.ini .
+	cp $GOPATH/src/github.com/yangpingcd/proxy3/proxy3.unix.ini ./proxy3.ini
 	dos2unix proxy3.ini
 	vi proxy3.ini
 	sudo ./proxy3 -service=install -config=$GOPATH/bin/proxy3.ini
-	vi /etc/init/proxy3.conf
+	[upstart]
+		vi /etc/init/proxy3.conf
+	[systemd]
+		vi /etc/systemd/system/proxy3.service
 	
 6. run proxy3 service
 	[upstart]
